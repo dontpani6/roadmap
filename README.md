@@ -38,7 +38,7 @@ npm start          # http://localhost:3000
 curl -fsSL https://raw.githubusercontent.com/dontpani6/roadmap/main/deploy/install.sh | sudo bash -s -- roadmap.example.com
 ```
 
-Пошаговая инструкция для бесплатного сервера: [docs/oracle.md](docs/oracle.md). На Oracle Cloud и Google Cloud ещё откройте порты 80 и 443 в панели облака (Oracle: Security List сети, Google: правило файрвола VPC). Бесплатный домен можно взять на [DuckDNS](https://www.duckdns.org).
+Пошаговые инструкции: [Hetzner](docs/hetzner.md) (около €6 в месяц) и [Oracle Cloud](docs/oracle.md) (бесплатно). На Oracle Cloud и Google Cloud ещё откройте порты 80 и 443 в панели облака (Oracle: Security List сети, Google: правило файрвола VPC). Бесплатный домен можно взять на [DuckDNS](https://www.duckdns.org).
 
 Без домена просто уберите `roadmap.example.com` в конце: приложение откроется по IP сервера, но без HTTPS.
 

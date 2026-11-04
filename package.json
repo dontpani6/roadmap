@@ -1,0 +1,22 @@
+{
+  "name": "vehi-roadmap",
+  "version": "1.0.0",
+  "description": "Командные дорожные карты на бесконечном холсте",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.18.3"
+  },
+  "private": true,
+  "bin": {
+    "roadmap": "cli/roadmap.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

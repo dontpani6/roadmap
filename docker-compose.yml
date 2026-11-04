@@ -1,0 +1,11 @@
+services:
+  roadmap:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Поставьте 1, когда сайт работает по HTTPS
+      COOKIE_SECURE: "0"
+    volumes:
+      - ./data:/data

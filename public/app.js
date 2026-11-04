@@ -1148,4 +1148,5 @@ const TEMPLATE = {
   links: [{ from: 'a', to: 'b' }, { from: 'a', to: 'c', style: 'dashed', label: 'параллельно' }, { from: 'b', to: 'd' }, { from: 'c', to: 'd', style: 'dashed' }, { from: 'd', to: 'e' }, { from: 'e', to: 'f' }, { from: 'f', to: 'g' }],
 };
 
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 boot();

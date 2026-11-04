@@ -38,6 +38,8 @@ npm start          # http://localhost:3000
 curl -fsSL https://raw.githubusercontent.com/dontpani6/roadmap/main/deploy/install.sh | sudo bash -s -- roadmap.example.com
 ```
 
+На Oracle Cloud и Google Cloud ещё откройте порты 80 и 443 в панели облака (Oracle: Security List сети, Google: правило файрвола VPC). Бесплатный домен можно взять на [DuckDNS](https://www.duckdns.org).
+
 Без домена просто уберите `roadmap.example.com` в конце: приложение откроется по IP сервера, но без HTTPS.
 
 Скрипт ставит Docker, скачивает приложение в `/opt/roadmap`, запускает его вместе с Caddy (HTTPS-сертификат получается автоматически) и включает:

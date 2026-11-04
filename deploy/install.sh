@@ -14,6 +14,13 @@ echo "==> Ставлю Docker и git"
 if ! command -v docker >/dev/null; then curl -fsSL https://get.docker.com | sh; fi
 command -v git >/dev/null || (apt-get update -qq && apt-get install -y -qq git)
 
+# Образы Oracle Cloud по умолчанию закрывают все порты, кроме SSH, через iptables.
+if command -v iptables >/dev/null && iptables -S INPUT 2>/dev/null | grep -q -- '-j REJECT'; then
+  echo "==> Открываю порты 80 и 443 в iptables"
+  for p in 80 443; do iptables -C INPUT -p tcp --dport $p -j ACCEPT 2>/dev/null || iptables -I INPUT 5 -p tcp --dport $p -j ACCEPT; done
+  command -v netfilter-persistent >/dev/null && netfilter-persistent save || true
+fi
+
 echo "==> Скачиваю приложение в $DIR"
 if [ -d "$DIR/.git" ]; then git -C "$DIR" pull --ff-only; else git clone "$REPO" "$DIR"; fi
 cd "$DIR"

@@ -1,11 +1,29 @@
+# Запуск: docker compose up -d --build
+# Настройки берутся из файла .env (его создаёт deploy/install.sh).
 services:
   roadmap:
     build: .
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
-      # Поставьте 1, когда сайт работает по HTTPS
-      COOKIE_SECURE: "0"
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      PUBLIC_URL: ${PUBLIC_URL:-}
     volumes:
       - ./data:/data
+
+  # Caddy принимает запросы на 80/443 и сам получает HTTPS-сертификат для DOMAIN.
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - roadmap
+
+volumes:
+  caddy_data:

@@ -244,36 +244,44 @@ app.get('/api/maps/:id/export', need, (req, res) => {
 
 const NORM = { node: M.normNode, edge: M.normEdge, shape: M.normShape };
 
-// Batch write: [{kind, id, data|null}], used for single edits, undo groups and pastes.
-app.post('/api/maps/:id/ops', need, canWrite, (req, res) => {
-  const m = getMap(req.params.id);
-  if (!m) return bad(res, 'Карта не найдена', 404);
-  const ops = Array.isArray(req.body?.ops) ? req.body.ops.slice(0, 2000) : [];
+// Batch write: [{kind, id, data|null}], used for single edits, undo groups, the API and the MCP tools.
+function applyOps(mapId, ops, user, client = null) {
   const t = now();
   const applied = [];
   db.exec('BEGIN');
   try {
-    for (const op of ops) {
+    for (const op of ops.slice(0, 2000)) {
       if (!NORM[op.kind] || !/^[\w-]{1,40}$/.test(op.id || '')) continue;
       if (op.data == null) {
-        db.prepare('DELETE FROM items WHERE map_id = ? AND kind = ? AND id = ?').run(m.id, op.kind, op.id);
+        db.prepare('DELETE FROM items WHERE map_id = ? AND kind = ? AND id = ?').run(mapId, op.kind, op.id);
         applied.push({ kind: op.kind, id: op.id, data: null });
       } else {
         const d = NORM[op.kind](op.data);
         if (!d) continue;
         db.prepare(`INSERT INTO items (map_id,kind,id,data,updated,updated_by) VALUES (?,?,?,?,?,?)
           ON CONFLICT(map_id,kind,id) DO UPDATE SET data=excluded.data, updated=excluded.updated, updated_by=excluded.updated_by`)
-          .run(m.id, op.kind, op.id, JSON.stringify(d), t, req.user.id);
+          .run(mapId, op.kind, op.id, JSON.stringify(d), t, user.id);
         applied.push({ kind: op.kind, id: op.id, data: d });
       }
     }
-    touch(m.id);
+    touch(mapId);
     db.exec('COMMIT');
-  } catch (e) { db.exec('ROLLBACK'); return bad(res, 'Не удалось сохранить: ' + e.message, 500); }
-  broadcastMap(m.id, { type: 'ops', ops: applied, by: req.user.id, client: req.body?.client || null });
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+  broadcastMap(mapId, { type: 'ops', ops: applied, by: user.id, client });
   if (applied.some((o) => o.kind === 'node')) broadcastAll({ type: 'maps' });
-  res.json({ ops: applied });
+  return applied;
+}
+
+app.post('/api/maps/:id/ops', need, canWrite, (req, res) => {
+  const m = getMap(req.params.id);
+  if (!m) return bad(res, 'Карта не найдена', 404);
+  const ops = Array.isArray(req.body?.ops) ? req.body.ops : [];
+  try { res.json({ ops: applyOps(m.id, ops, req.user, req.body?.client || null) }); }
+  catch (e) { bad(res, 'Не удалось сохранить: ' + e.message, 500); }
 });
+
+// MCP endpoint so an AI assistant in any chat can read and fill roadmaps.
+require('./mcp').mount(app, { db, M, userFromReq, applyOps, createMap, loadItems, getMap, mapSummary, broadcastAll });
 
 // Image uploads for the canvas
 app.post('/api/uploads', need, canWrite, express.raw({ type: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'], limit: '10mb' }), (req, res) => {

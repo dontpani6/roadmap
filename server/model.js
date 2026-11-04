@@ -154,4 +154,4 @@ function toMarkdown(map, items) {
   return out.join('\n');
 }
 
-module.exports = { uid, normNode, normEdge, normShape, countSubs, fromImport, toExport, toMarkdown, STATUSES };
+module.exports = { uid, CARD_W, estHeight, autoLayout, normSubs, normNode, normEdge, normShape, countSubs, fromImport, toExport, toMarkdown, STATUSES };

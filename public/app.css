@@ -233,7 +233,7 @@ input, textarea, select { font: inherit; color: inherit; }
 
 /* modal */
 .modal { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 20; padding: 16px; }
-.modal-box { width: min(640px, 100%); max-height: calc(100% - 32px); overflow: auto; background: var(--panel); border: 1px solid var(--line-hi); border-radius: 14px; padding: 22px; display: grid; gap: 14px; }
+.modal-box { grid-template-columns: minmax(0, 1fr); width: min(640px, 100%); max-height: calc(100% - 32px); overflow: auto; background: var(--panel); border: 1px solid var(--line-hi); border-radius: 14px; padding: 22px; display: grid; gap: 14px; }
 .modal-box h2 { margin: 0; font-size: 18px; font-weight: 600; }
 .modal-box h3 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); font-weight: 600; }
 .modal-box p { margin: 0; color: var(--fg-2); font-size: 13px; }
@@ -246,7 +246,9 @@ input, textarea, select { font: inherit; color: inherit; }
 .modal-foot { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .rows { display: grid; gap: 6px; }
 .rowi { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--card); font-size: 13px; }
+.rowi { flex-wrap: wrap; }
 .rowi .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rowi code.grow { overflow-wrap: anywhere; flex-basis: 220px; }
 .rowi select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
 .tabs button { padding: 8px 12px; color: var(--mute); border-bottom: 2px solid transparent; margin-bottom: -1px; }

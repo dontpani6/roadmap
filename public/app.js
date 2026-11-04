@@ -1009,25 +1009,31 @@ async function openSettings(tab = 'team') {
   if (!team) return;
   const ROLE = { admin: 'Администратор', member: 'Участник', viewer: 'Только просмотр' };
   const inviteUrl = (c) => `${location.origin}/?invite=${c}`;
-  const tabs = { team: 'Команда', cli: 'CLI и API', account: 'Аккаунт' };
+  const tabs = { team: 'Команда', cli: 'ИИ и API', account: 'Аккаунт' };
   const body = {
     team: `<div class="rows">${team.users.map((u) => `<div class="rowi"><span class="avatar" style="background:${u.color}">${esc(initials(u.name))}</span><span class="grow"><b>${esc(u.name)}</b> <span class="muted">${esc(u.email)}</span></span>
         ${admin && u.id !== S.me.id ? `<select data-role="${u.id}">${Object.entries(ROLE).map(([k, v]) => `<option value="${k}" ${u.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select><button class="icon-btn sm" data-rmuser="${u.id}" title="Удалить из команды">${icon('trash', 'sm')}</button>` : `<span class="muted">${ROLE[u.role]}</span>`}</div>`).join('')}</div>
       ${admin ? `<h3>Приглашения</h3><p>Каждая ссылка работает один раз. Отправьте её коллеге любым удобным способом.</p>
       <div class="rows">${team.invites.map((i) => `<div class="rowi"><code class="grow">${esc(inviteUrl(i.code))}</code><button class="btn ghost" data-copy="${esc(inviteUrl(i.code))}">Копировать</button><button class="icon-btn sm" data-rminv="${i.code}" title="Отозвать">${icon('x', 'sm')}</button></div>`).join('') || '<p class="muted">Активных приглашений нет.</p>'}</div>
       <div class="modal-foot"><button class="btn primary" id="mkInvite">${icon('plus')}Создать приглашение</button></div>` : '<p>Приглашать коллег может администратор.</p>'}`,
-    cli: `<p>Токен позволяет создавать и выгружать карты из терминала или скриптов, например чтобы сгенерировать дорожную карту из дизайн-документов.</p>
+    cli: `<p>Подключите Вехи к Claude или другому ИИ-ассистенту, и он сможет сам создавать и заполнять карты в любом чате: «собери дорожную карту из этих дизайн-документов», «отметь готовыми задачи по экономике», «добавь этап LiveOps после релиза». Объяснение, как пользоваться приложением, ассистент получает сам при подключении.</p>
+      <h3>1. Создайте токен</h3>
+      <div id="newTok"></div>
+      <div class="modal-foot" style="justify-content:flex-start"><input type="text" id="tokName" placeholder="Название, например «Claude»"><button class="btn primary" id="mkTok">Создать токен</button></div>
+      <div class="rows">${(tokens.tokens || []).map((t) => `<div class="rowi"><span class="grow">${esc(t.name)} <span class="muted">· создан ${new Date(t.created).toLocaleDateString('ru-RU')}${t.last_used ? ', использовался ' + new Date(t.last_used).toLocaleDateString('ru-RU') : ''}</span></span><button class="icon-btn sm" data-rmtok="${t.id}" title="Отозвать">${icon('trash', 'sm')}</button></div>`).join('')}</div>
+      <h3>2. Подключите ассистента</h3>
+      <p><b>Claude.ai или приложение Claude:</b> Настройки → Коннекторы → Добавить свой коннектор. В поле URL вставьте адрес с токеном:</p>
+      <pre id="mcpUrl">${esc(location.origin)}/mcp/rm_ВАШ_ТОКЕН</pre>
+      <p><b>Claude Code:</b></p>
+      <pre id="mcpCli">claude mcp add --transport http vehi ${esc(location.origin)}/mcp --header "Authorization: Bearer rm_ВАШ_ТОКЕН"</pre>
+      <p>Подойдёт любой клиент с поддержкой MCP по HTTP. Адрес с токеном даёт полный доступ от вашего имени, не публикуйте его.</p>
+      <h3>Командная строка и HTTP API</h3>
       <pre>export ROADMAP_URL=${esc(location.origin)}
 export ROADMAP_TOKEN=rm_…
-
 node cli/roadmap.js list
 node cli/roadmap.js import plan.json
 node cli/roadmap.js export &lt;id&gt; --md &gt; plan.md</pre>
-      <p>То же через HTTP: <code>POST /api/maps/import</code> с заголовком <code>Authorization: Bearer rm_…</code> и JSON карты в теле.</p>
-      <h3>Ваши токены</h3>
-      <div id="newTok"></div>
-      <div class="rows">${(tokens.tokens || []).map((t) => `<div class="rowi"><span class="grow">${esc(t.name)} <span class="muted">· создан ${new Date(t.created).toLocaleDateString('ru-RU')}${t.last_used ? ', использовался ' + new Date(t.last_used).toLocaleDateString('ru-RU') : ''}</span></span><button class="icon-btn sm" data-rmtok="${t.id}" title="Отозвать">${icon('trash', 'sm')}</button></div>`).join('') || '<p class="muted">Токенов пока нет.</p>'}</div>
-      <div class="modal-foot"><input type="text" id="tokName" placeholder="Название, например «Ноутбук»"><button class="btn primary" id="mkTok">Создать токен</button></div>`,
+      <p>Или напрямую: <code>POST /api/maps/import</code> с заголовком <code>Authorization: Bearer rm_…</code>.</p>`,
     account: `<p>${esc(S.me.name)} · ${esc(S.me.email)} · ${ROLE[S.me.role]}</p>
       <h3>Сменить пароль</h3>
       <input type="password" id="pwCur" placeholder="Текущий пароль" autocomplete="current-password"><input type="password" id="pwNew" placeholder="Новый пароль, от 8 символов" autocomplete="new-password">
@@ -1046,8 +1052,13 @@ node cli/roadmap.js export &lt;id&gt; --md &gt; plan.md</pre>
     const mt = box.querySelector('#mkTok'); if (mt) mt.onclick = async () => {
       const { token } = await api('POST', '/api/tokens', { name: box.querySelector('#tokName').value || 'CLI' });
       await openSettings('cli');
-      $('#newTok').innerHTML = `<div class="rowi" style="border:1px solid var(--ok)"><code class="grow">${esc(token)}</code><button class="btn ghost" id="cpTok">Копировать</button></div><p>Сохраните токен сейчас: показать его ещё раз не получится.</p>`;
-      $('#cpTok').onclick = () => navigator.clipboard.writeText(token).then(() => toast('Токен скопирован'));
+      const url = `${location.origin}/mcp/${token}`;
+      $('#newTok').innerHTML = `<div class="rowi" style="border:1px solid var(--ok)"><code class="grow">${esc(token)}</code><button class="btn ghost" id="cpTok">Копировать токен</button><button class="btn ghost" id="cpUrl">Копировать URL для Claude</button></div><p>Сохраните токен сейчас: показать его ещё раз не получится.</p>`;
+      $('#mcpUrl').textContent = url;
+      $('#mcpCli').textContent = `claude mcp add --transport http vehi ${location.origin}/mcp --header "Authorization: Bearer ${token}"`;
+      const cp = (t, m) => navigator.clipboard.writeText(t).then(() => toast(m), () => toast('Не удалось скопировать, выделите текст вручную', true));
+      $('#cpTok').onclick = () => cp(token, 'Токен скопирован');
+      $('#cpUrl').onclick = () => cp(url, 'Адрес скопирован');
     };
     const lo = box.querySelector('#logout'); if (lo) lo.onclick = () => api('POST', '/api/auth/logout').then(() => location.reload());
     const pw = box.querySelector('#pwGo'); if (pw) pw.onclick = () => api('POST', '/api/me/password', { current: box.querySelector('#pwCur').value, next: box.querySelector('#pwNew').value })

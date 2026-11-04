@@ -29,32 +29,42 @@ npm start          # http://localhost:3000
 
 ## Развёртывание на сервере
 
-Подойдёт любой VPS с Docker (Hetzner, Timeweb, Selectel, DigitalOcean и т. п.), 1 ГБ памяти хватает.
+Подойдёт любой VPS с Ubuntu или Debian и 1 ГБ памяти. Для команды из нескольких человек этого хватает с запасом.
+
+1. Купите сервер и, если хотите HTTPS, направьте домен (A-запись) на его IP.
+2. Зайдите на сервер по SSH и выполните одну команду:
 
 ```bash
-git clone <репозиторий> roadmap && cd roadmap
-docker compose up -d --build
+curl -fsSL https://raw.githubusercontent.com/dontpani6/roadmap/main/deploy/install.sh | sudo bash -s -- roadmap.example.com
 ```
 
-Приложение поднимется на порту 3000. Для HTTPS проще всего поставить перед ним [Caddy](https://caddyserver.com), он сам получит сертификат:
+Без домена просто уберите `roadmap.example.com` в конце: приложение откроется по IP сервера, но без HTTPS.
 
-```
-# /etc/caddy/Caddyfile
-roadmap.example.com {
-    reverse_proxy localhost:3000
-}
-```
+Скрипт ставит Docker, скачивает приложение в `/opt/roadmap`, запускает его вместе с Caddy (HTTPS-сертификат получается автоматически) и включает:
 
-После включения HTTPS поставьте `COOKIE_SECURE: "1"` в `docker-compose.yml` и выполните `docker compose up -d`.
+- **автообновление**: каждые 5 минут сервер проверяет ветку `main` на GitHub и, если там есть новая версия, сам пересобирается и перезапускается. Ничего переустанавливать не нужно, данные сохраняются;
+- **резервную копию** папки `data` каждую ночь в `/opt/roadmap/backups` (хранятся 14 дней).
 
-Переменные окружения:
+Журнал обновлений: `/var/log/roadmap-update.log`. Обновить вручную: `sudo /opt/roadmap/deploy/update.sh`.
 
-| Переменная | По умолчанию | Назначение |
-|---|---|---|
-| `PORT` | `3000` | порт HTTP |
-| `DATA_DIR` | `./data` (в Docker `/data`) | где хранить базу и картинки |
-| `COOKIE_SECURE` | `0` | `1`, чтобы cookie входа отправлялась только по HTTPS |
-| `TRUST_PROXY` | `1` | `0`, если приложение смотрит в интернет без прокси |
+Переменные в `/opt/roadmap/.env`:
+
+| Переменная | Назначение |
+|---|---|
+| `DOMAIN` | домен для HTTPS или `:80`, чтобы работать по IP |
+| `PUBLIC_URL` | внешний адрес, им подписываются ссылки на карты для ИИ |
+| `COOKIE_SECURE` | `1` при HTTPS |
+
+## Подключение ИИ (MCP)
+
+В приложение встроен MCP-сервер, поэтому Claude и другие ассистенты могут сами создавать и заполнять карты из любого чата: «собери дорожную карту из этих дизайн-документов», «отметь готовыми задачи по экономике», «добавь этап LiveOps после релиза». При подключении ассистент сразу получает объяснение, как устроено приложение и как правильно заполнять карты.
+
+1. В приложении откройте «Настройки → ИИ и API» и создайте токен.
+2. Подключите ассистента:
+   - **Claude.ai или приложение Claude**: Настройки → Коннекторы → Добавить свой коннектор, URL: `https://ваш-домен/mcp/rm_ВАШ_ТОКЕН`.
+   - **Claude Code**: `claude mcp add --transport http vehi https://ваш-домен/mcp --header "Authorization: Bearer rm_ВАШ_ТОКЕН"`.
+
+Инструменты: `roadmap_guide`, `list_maps`, `get_map`, `create_map`, `rename_map`, `add_stages`, `update_stage`, `add_subtasks`, `set_subtasks_done`, `link_stages`, `unlink_stages`, `delete_stage`. Изменения сразу видны всей команде.
 
 ## CLI и API
 
@@ -106,7 +116,9 @@ HTTP API (заголовок `Authorization: Bearer rm_...`):
 ## Устройство
 
 - `server/index.js` — HTTP, вход, API, WebSocket для живых обновлений и курсоров.
+- `server/mcp.js` — MCP-сервер для ИИ-ассистентов.
 - `server/model.js` — формат данных, импорт с авторасстановкой, экспорт в JSON и Markdown.
 - `server/db.js` — SQLite (встроенный модуль Node).
 - `public/` — интерфейс без сборки: `index.html`, `app.css`, `app.js`.
 - `cli/roadmap.js` — командная строка.
+- `deploy/` — установка на сервер, автообновление, Caddy.
